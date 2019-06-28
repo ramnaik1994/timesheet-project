@@ -1,0 +1,234 @@
+package jbr.springmvc.controller;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
+import javax.validation.Valid;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.propertyeditors.CustomDateEditor;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.ui.ModelMap;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.InitBinder;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.ModelAndView;
+
+import jbr.springmvc.dao.Empdetails;
+import jbr.springmvc.dao.ManDao;
+import jbr.springmvc.model.Emp;
+import jbr.springmvc.model.project;
+import jbr.springmvc.service.EmpDetailsLoginService;
+import jbr.springmvc.service.EmpdetailsService;
+import jbr.springmvc.service.LoginService;
+import jbr.springmvc.service.ProjectdaoService;
+
+@Controller
+public class TimeSheetController {
+	JdbcTemplate template;
+	@Autowired
+	private ManDao manDao;
+	@Autowired
+	Empdetails dao;
+	@Autowired
+	EmpDetailsLoginService empDetailsLoginService;
+	@Autowired
+	EmpdetailsService empdetailsService;
+	@Autowired
+	ProjectdaoService projectdaoService;
+
+	@Autowired
+	LoginService loginService;
+
+	@InitBinder
+	public final void initBinderUsuariosFormValidator(final WebDataBinder binder, final Locale locale) {
+		final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", locale);
+		binder.registerCustomEditor(Date.class, new CustomDateEditor(dateFormat, true));
+	}
+	
+	  @RequestMapping(value = "/Wel") public ModelAndView empDetailsLogin() {
+	  List<project> empLoginList = new ArrayList<project>(); empLoginList =
+	  empDetailsLoginService.getEmpdetailsLogin();
+	  
+	  return new ModelAndView("wel", "empLoginList", empLoginList); }
+	 
+
+	@RequestMapping(value = "/empdetail")
+	public ModelAndView empdetails1() {
+		List<Emp> empList = new ArrayList<Emp>();
+		empList = empdetailsService.getEmpdetails();
+
+		return new ModelAndView("empdetail", "empList", empList);
+	}
+
+	@RequestMapping(value = "/projectdetails")
+	public ModelAndView prodetails() {
+		List<project> projectList = new ArrayList<project>();
+		projectList = projectdaoService.getProjectDaoImp();
+
+		return new ModelAndView("projectdetails", "projectList", projectList);
+	}
+
+	@RequestMapping(value = "/login", method = RequestMethod.POST)
+	public ModelAndView LoginProcess(@RequestParam("type") String type , @RequestParam("empid") String empid,
+			@RequestParam("pass") String pass, @ModelAttribute @Valid Emp emp, BindingResult result) {
+
+			if (result.hasFieldErrors()) {
+				return new ModelAndView("errpage");
+			}
+
+				if (!loginService.getLoginDetails(empid, pass)) {
+					return new ModelAndView("errpage");
+				} else {
+					if (type.equals("employee")) {
+					 List<project> empLoginList = new ArrayList<project>(); empLoginList =
+							  empDetailsLoginService.getEmpdetailsLogin();
+							  return new ModelAndView("Wel", "empLoginList", empLoginList); 
+					} else {
+						return new ModelAndView("manager");
+			}
+		}
+	}
+	
+
+	@RequestMapping(value = "/update")
+	public String update(Model model) {
+		System.out.println("redirect:/update");
+		model.addAttribute("emp", new Emp());
+
+		return "update";
+	}
+
+	@RequestMapping(value = "/save")
+	public String Save(@Valid @ModelAttribute("emp") Emp emp, BindingResult result, ModelMap model) {
+		System.out.println("redirect:/save");
+		if (result.hasErrors()) {
+			return "errpage";
+		}
+
+		dao.update(emp);
+		return "updatedresults";
+	}
+
+	@RequestMapping(value = "/delete")
+	public String delete(Model model) {
+		System.out.println("deletee");
+		model.addAttribute("emp", new Emp());
+
+		return "delete";
+	}
+
+	@RequestMapping(value = "/deleteprocess")
+	public String delete(@Valid @ModelAttribute("emp") Emp emp, BindingResult result, ModelMap model) {
+		System.out.println("delete process");
+		if (result.hasErrors()) {
+			return "errpage";
+		}
+
+		dao.update(emp);
+		return "deletedresults";
+	}
+
+	@RequestMapping(value = "/searchby")
+	public String searchby(Model model) {
+		System.out.println("search");
+		project prj = new project();
+		prj.setPid("234345345345");
+		model.addAttribute("project", prj);
+
+		return "searchby";
+	}
+
+	@RequestMapping(value = "/searchbyprocess")
+	public String search(@ModelAttribute("project") project prj, Model model) {
+		// project prj = new project();
+		// prj.setPid(pid);
+
+		List<project> searchList = dao.getSearchbyId(prj.getPid());
+		model.addAttribute("project", prj);
+		model.addAttribute("searchList", searchList);
+		// return new ModelAndView("searchby","searchList",searchList);
+		return "searchby";
+	}
+
+	@RequestMapping(value = "/rscutin")
+	public String resourceutilization(Model model) {
+		System.out.println("rsc utili");
+		project prj = new project();
+
+		model.addAttribute("project", prj);
+
+		return "rscutin";
+	}
+
+	@RequestMapping(value = "/resourceutilization")
+	public String rscutil(@ModelAttribute("project") project prj, Model model) {
+		List<project> rscutilList = dao.getRscUtilId(prj.getPid(), prj.getEmpid());
+		model.addAttribute("project", prj);
+		model.addAttribute("rscutilList", rscutilList);
+
+		return "rscutin";
+	}
+
+	@RequestMapping(value = "/rscmap")
+	public String rscmap(Model model) {
+		System.out.println("redirect:/rscmap");
+		model.addAttribute("emp", new Emp());
+
+		return "rscmap";
+	}
+
+	@RequestMapping(value = "/rscmapprocess")
+	public String rscmapprocess(@Valid @ModelAttribute("emp") Emp emp, BindingResult result, ModelMap model) {
+
+		if (result.hasErrors()) {
+			return "errpage";
+		}
+
+		dao.rscmap(emp);
+		return "rscmap";
+	}
+	
+	@RequestMapping(value = "/addprojectdetails")
+	public String addprojectdetails(Model model) {
+		System.out.println("redirect:/update");
+		model.addAttribute("project", new project());
+
+		return "addprojectdetails";
+	}
+
+	@RequestMapping(value = "/addprojectdetailsprocess")
+	public String Saveprojectdetails(@Valid @ModelAttribute("project") project project, BindingResult result, ModelMap model) {
+		System.out.println("redirect:/projectdet");
+		if (result.hasErrors()) {
+			return "errpage";
+		}
+
+		dao.addprojectdetail(project);
+		model.addAttribute("project", new project());
+		model.addAttribute("successMessage", " Project added successFully");
+		return "addprojectdetails";
+	}
+	
+	@RequestMapping(value = "/logout")
+    public String logout(HttpServletRequest request) {
+        
+        HttpSession httpSession = request.getSession();
+        httpSession.invalidate();
+        return "redirect:login.jsp";
+    }
+	
+
+}
